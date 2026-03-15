@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI DJ System — BodyMovementAI</title>
+<meta name="description" content="Real-time AI-powered music generation driven by dancer movement. The AI DJ reads the room, matches energy, and creates live soundscapes from body data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #080a0f;
+    --dark:    #0d1117;
+    --panel:   #111820;
+    --border:  #1e2d3d;
+    --dim:     #243344;
+    --teal:    #00e5b4;
+    --teal2:   #00b890;
+    --cyan:    #00ccff;
+    --magenta: #e94560;
+    --white:   #e8edf2;
+    --muted:   #5a7a94;
+    --mono:    'Space Mono', monospace;
+    --display: 'Bebas Neue', sans-serif;
+    --body:    'DM Sans', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  ::selection { background: var(--cyan); color: var(--black); }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 48px;
+    background: rgba(8,10,15,0.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--teal);
+    letter-spacing: 0.05em;
+    text-decoration: none;
+  }
+  .nav-links {
+    display: flex;
+    gap: 36px;
+    list-style: none;
+  }
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--white); }
+  .nav-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--black);
+    background: var(--cyan);
+    padding: 4px 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 120px 48px 80px;
+    gap: 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,204,255,0.008) 3px, rgba(0,204,255,0.008) 4px);
+    pointer-events: none;
+  }
+
+  .hero-left { position: relative; z-index: 2; }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.2s;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: var(--cyan);
+  }
+
+  .hero-title {
+    font-family: var(--display);
+    font-size: clamp(68px, 8vw, 120px);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.4s;
+  }
+  .hero-title .line-cyan { color: var(--cyan); }
+  .hero-title .line-dim  { color: var(--muted); font-size: 0.6em; letter-spacing: 0.08em; }
+
+  .hero-desc {
+    font-size: 17px;
+    color: var(--muted);
+    max-width: 480px;
+    line-height: 1.7;
+    margin-bottom: 48px;
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.6s;
+  }
+  .hero-desc strong { color: var(--white); font-weight: 500; }
+
+  .hero-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.8s;
+  }
+
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--black);
+    background: var(--cyan);
+    border: none;
+    padding: 16px 32px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .btn-primary:hover { background: #00aadd; transform: translateY(-2px); }
+
+  .btn-ghost {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 16px 32px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-ghost:hover { color: var(--white); border-color: var(--dim); }
+
+  /* ── HERO VISUALIZER ── */
+  .hero-right {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeIn 1.2s ease forwards 0.6s;
+  }
+
+  .viz-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .viz-glow {
+    position: absolute;
+    inset: -40px;
+    background: radial-gradient(ellipse at center, rgba(0,204,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  #djCanvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 0 24px rgba(0,204,255,0.3));
+  }
+
+  .canvas-label {
+    position: absolute;
+    bottom: -32px;
+    left: 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .metrics-readout {
+    position: absolute;
+    top: 20px;
+    right: -20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .metric-chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--cyan);
+    background: rgba(0,204,255,0.08);
+    border: 1px solid rgba(0,204,255,0.2);
+    padding: 5px 10px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .metric-chip span { color: var(--white); }
+
+  /* ── TICKER ── */
+  .ticker {
+    background: var(--cyan);
+    color: var(--black);
+    padding: 10px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-inner {
+    display: inline-flex;
+    gap: 60px;
+    animation: ticker 20s linear infinite;
+  }
+  .ticker-item {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .ticker-item::before {
+    content: '◆';
+    margin-right: 24px;
+    opacity: 0.5;
+  }
+
+  /* ── SECTION STYLES ── */
+  section {
+    padding: 100px 48px;
+    position: relative;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    display: block;
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    max-width: 80px;
+  }
+
+  .section-title {
+    font-family: var(--display);
+    font-size: clamp(48px, 6vw, 88px);
+    line-height: 0.92;
+    letter-spacing: 0.02em;
+    margin-bottom: 24px;
+  }
+
+  /* ── HOW IT WORKS ── */
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+    background: var(--border);
+  }
+  .how-step {
+    background: var(--dark);
+    padding: 48px 28px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+  .how-step:hover { background: var(--panel); }
+  .how-step::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 0;
+    background: var(--cyan);
+    transition: height 0.4s ease;
+  }
+  .how-step:hover::before { height: 100%; }
+
+  .step-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 0.15em;
+    margin-bottom: 24px;
+  }
+  .step-title {
+    font-family: var(--display);
+    font-size: 28px;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  .step-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+  .step-code {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan);
+    background: rgba(0,204,255,0.06);
+    border: 1px solid rgba(0,204,255,0.15);
+    padding: 8px 12px;
+    margin-top: 16px;
+    display: inline-block;
+  }
+
+  /* ── CARDS GRID ── */
+  .cards-section {
+    background: var(--dark);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+    background: var(--border);
+  }
+  .card {
+    background: var(--panel);
+    padding: 48px 36px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .card:hover { background: #141e28; }
+  .card-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+    display: block;
+  }
+  .card-title {
+    font-family: var(--display);
+    font-size: 30px;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  .card-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+    font-weight: 300;
+    margin-bottom: 24px;
+  }
+  .card-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--black);
+    background: var(--cyan);
+    border: none;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .card-btn:hover { background: #00aadd; transform: translateY(-2px); }
+  .card-btn.ghost {
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+  }
+  .card-btn.ghost:hover { color: var(--white); border-color: var(--dim); }
+
+  .card-tag {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--cyan);
+    border: 1px solid rgba(0,204,255,0.3);
+    padding: 3px 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .card-tag.soon {
+    color: var(--magenta);
+    border-color: rgba(233,69,96,0.3);
+  }
+
+  /* ── STATS ── */
+  .stats-band {
+    padding: 64px 48px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    background: var(--border);
+  }
+  .stat-cell {
+    background: var(--black);
+    padding: 40px 32px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: var(--display);
+    font-size: 72px;
+    line-height: 1;
+    color: var(--cyan);
+    letter-spacing: 0.02em;
+  }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  /* ── PIPELINE ── */
+  .pipeline-section {
+    background: var(--dark);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .pipeline-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 64px;
+    overflow-x: auto;
+  }
+  .pipeline-node {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 28px 24px;
+    text-align: center;
+    position: relative;
+    min-width: 140px;
+  }
+  .pipeline-node::after {
+    content: '→';
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--cyan);
+    font-size: 18px;
+    z-index: 2;
+  }
+  .pipeline-node:last-child::after { display: none; }
+  .pnode-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .pnode-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .pnode-desc {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ── CTA ── */
+  .cta-section {
+    text-align: center;
+    padding: 120px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,204,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-title {
+    font-family: var(--display);
+    font-size: clamp(56px, 8vw, 112px);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    margin-bottom: 28px;
+    position: relative;
+  }
+  .cta-sub {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto 48px;
+    font-weight: 300;
+    position: relative;
+  }
+  .cta-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 48px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 40px;
+  }
+  .footer-logo {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--cyan);
+    margin-bottom: 8px;
+  }
+  .footer-tagline {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  .footer-right {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    line-height: 2;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    49%      { opacity: 1; }
+    50%      { opacity: 0; }
+    99%      { opacity: 0; }
+  }
+  .blink { animation: blink 1s step-start infinite; }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; gap: 48px; }
+    .hero-right { order: -1; }
+    .metrics-readout { display: none; }
+    section { padding: 72px 24px; }
+    .how-grid { grid-template-columns: 1fr; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .stats-band { grid-template-columns: repeat(2, 1fr); padding: 0; }
+    .pipeline-flow { gap: 8px; flex-wrap: wrap; }
+    .pipeline-node::after { display: none; }
+    footer { grid-template-columns: 1fr; }
+    .footer-right { text-align: left; }
+    .cta-section { padding: 80px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">BMAI<span class="blink">_</span></a>
+  <ul class="nav-links">
+    <li><a href="#system">System</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#pipeline">Pipeline</a></li>
+    <li><a href="/">Main Site</a></li>
+  </ul>
+  <span class="nav-badge">AI DJ · Prototype</span>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <p class="hero-eyebrow">Movement-Driven Music</p>
+    <h1 class="hero-title">
+      AI<br>
+      <span class="line-cyan">DJ</span><br>
+      SYSTEM<br>
+      <span class="line-dim">DESIGN</span>
+    </h1>
+    <p class="hero-desc">
+      Real-time music generation driven by dancer movement.
+      <strong>The AI reads the room.</strong> Pose data becomes BPM. Energy levels shape drops. Crowd movement writes the playlist — live.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="alert('AI DJ Prototype — Launch feature coming soon')">Launch AI DJ</button>
+      <a href="#system" class="btn-ghost">See The System</a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="viz-wrap">
+      <div class="viz-glow"></div>
+      <canvas id="djCanvas" width="480" height="400"></canvas>
+      <p class="canvas-label">LIVE AUDIO WAVEFORM — MOVEMENT REACTIVE</p>
+    </div>
+    <div class="metrics-readout">
+      <div class="metric-chip">BPM <span id="bpmRead">128</span></div>
+      <div class="metric-chip">ENERGY <span id="energyRead">0.74</span></div>
+      <div class="metric-chip">DANCERS <span id="dancerRead">12</span></div>
+      <div class="metric-chip">MODE <span id="modeRead">AUTO</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-inner">
+    <span class="ticker-item">Movement-to-Music</span>
+    <span class="ticker-item">Real-Time BPM Sync</span>
+    <span class="ticker-item">Crowd Energy Detection</span>
+    <span class="ticker-item">Pose-Driven Drops</span>
+    <span class="ticker-item">Live Soundscape</span>
+    <span class="ticker-item">Dance Analytics</span>
+    <span class="ticker-item">Dancer Profiles</span>
+    <span class="ticker-item">Social Feedback</span>
+    <span class="ticker-item">Movement-to-Music</span>
+    <span class="ticker-item">Real-Time BPM Sync</span>
+    <span class="ticker-item">Crowd Energy Detection</span>
+    <span class="ticker-item">Pose-Driven Drops</span>
+    <span class="ticker-item">Live Soundscape</span>
+    <span class="ticker-item">Dance Analytics</span>
+    <span class="ticker-item">Dancer Profiles</span>
+    <span class="ticker-item">Social Feedback</span>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="system">
+  <p class="section-label reveal">How The AI DJ Works</p>
+  <h2 class="section-title reveal">FOUR<br>STAGES.</h2>
+
+  <div class="how-grid">
+    <div class="how-step reveal">
+      <p class="step-num">01 / CAPTURE</p>
+      <h3 class="step-title">READ THE ROOM</h3>
+      <p class="step-desc">Cameras capture dancer positions and crowd density in real-time. Pose tracking extracts movement data from every body in the space.</p>
+      <span class="step-code">pose.detect(crowd_feed)</span>
+    </div>
+    <div class="how-step reveal" style="transition-delay: 0.1s">
+      <p class="step-num">02 / ANALYSE</p>
+      <h3 class="step-title">MEASURE ENERGY</h3>
+      <p class="step-desc">AI computes crowd energy, movement velocity, synchronisation levels, and dance intensity. Maps physical data to musical parameters.</p>
+      <span class="step-code">energy = velocity.mean()</span>
+    </div>
+    <div class="how-step reveal" style="transition-delay: 0.2s">
+      <p class="step-num">03 / GENERATE</p>
+      <h3 class="step-title">BUILD THE SOUND</h3>
+      <p class="step-desc">Music engine generates BPM, key, intensity and transitions in real-time. High energy triggers drops. Stillness brings ambient textures.</p>
+      <span class="step-code">synth.setBPM(crowd_bpm)</span>
+    </div>
+    <div class="how-step reveal" style="transition-delay: 0.3s">
+      <p class="step-num">04 / FEEDBACK</p>
+      <h3 class="step-title">CLOSE THE LOOP</h3>
+      <p class="step-desc">The crowd reacts to the music, which changes their movement, which changes the music. A self-reinforcing feedback loop of sound and motion.</p>
+      <span class="step-code">loop.evolve(feedback)</span>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-band">
+  <div class="stat-cell reveal">
+    <div class="stat-num">128</div>
+    <div class="stat-label">Adaptive BPM Range</div>
+  </div>
+  <div class="stat-cell reveal" style="transition-delay:0.1s">
+    <div class="stat-num">33</div>
+    <div class="stat-label">Joints Per Dancer</div>
+  </div>
+  <div class="stat-cell reveal" style="transition-delay:0.2s">
+    <div class="stat-num">30<small style="font-size:0.4em">FPS</small></div>
+    <div class="stat-label">Real-Time Analysis</div>
+  </div>
+  <div class="stat-cell reveal" style="transition-delay:0.3s">
+    <div class="stat-num">∞</div>
+    <div class="stat-label">Unique Soundscapes</div>
+  </div>
+</div>
+
+<!-- FEATURES / CARDS -->
+<section id="features" class="cards-section">
+  <p class="section-label reveal">Platform Features</p>
+  <h2 class="section-title reveal">AI DJ +<br>DANCE<br>INTELLIGENCE.</h2>
+
+  <div class="cards-grid">
+    <div class="card reveal">
+      <span class="card-tag">Prototype</span>
+      <span class="card-icon">🎛️</span>
+      <h3 class="card-title">AI DJ SYSTEM</h3>
+      <p class="card-desc">Real-time music generation based on dancer movement. The AI reads energy, velocity, and crowd sync to create a live evolving soundscape that responds to the room.</p>
+      <button class="card-btn" onclick="alert('AI DJ Prototype — Full feature in development')">Launch AI DJ</button>
+    </div>
+
+    <div class="card reveal" style="transition-delay:0.1s">
+      <span class="card-tag soon">Coming Soon</span>
+      <span class="card-icon">📊</span>
+      <h3 class="card-title">DANCE ANALYTICS</h3>
+      <p class="card-desc">Observe crowd movement and energy in real-time. Heatmaps of dancer positions, energy graphs over time, peak detection, and synchronisation scores.</p>
+      <button class="card-btn ghost" onclick="alert('Dance Analytics — Coming Soon')">View Analytics</button>
+    </div>
+
+    <div class="card reveal" style="transition-delay:0.15s">
+      <span class="card-tag soon">Coming Soon</span>
+      <span class="card-icon">👤</span>
+      <h3 class="card-title">DANCER PROFILES</h3>
+      <p class="card-desc">Music preferences and dance history per individual. The system learns what moves you, builds your movement fingerprint, and curates personal soundscapes.</p>
+      <button class="card-btn ghost" onclick="alert('Dancer Profiles — Coming Soon')">Open Profiles</button>
+    </div>
+
+    <div class="card reveal" style="transition-delay:0.2s">
+      <span class="card-tag soon">Coming Soon</span>
+      <span class="card-icon">🗳️</span>
+      <h3 class="card-title">SOCIAL FEEDBACK</h3>
+      <p class="card-desc">Vote on songs for tonight's event. Crowd-sourced playlist shaping that feeds into the AI DJ's decision engine. Democracy meets the dance floor.</p>
+      <button class="card-btn ghost" onclick="alert('Social Feedback — Coming Soon')">Vote Now</button>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline" class="pipeline-section">
+  <p class="section-label reveal">Signal Flow</p>
+  <h2 class="section-title reveal">FROM BODY<br>TO BEAT.</h2>
+  <div class="pipeline-flow">
+    <div class="pipeline-node reveal">
+      <span class="pnode-icon">📷</span>
+      <p class="pnode-label">Capture</p>
+      <p class="pnode-desc">Camera feed<br>Multi-dancer</p>
+    </div>
+    <div class="pipeline-node reveal" style="transition-delay:0.1s">
+      <span class="pnode-icon">🦴</span>
+      <p class="pnode-label">Track</p>
+      <p class="pnode-desc">Pose detection<br>33 joints each</p>
+    </div>
+    <div class="pipeline-node reveal" style="transition-delay:0.2s">
+      <span class="pnode-icon">⚡</span>
+      <p class="pnode-label">Analyse</p>
+      <p class="pnode-desc">Energy + velocity<br>Crowd sync</p>
+    </div>
+    <div class="pipeline-node reveal" style="transition-delay:0.3s">
+      <span class="pnode-icon">🎵</span>
+      <p class="pnode-label">Generate</p>
+      <p class="pnode-desc">BPM + key + drops<br>Live synthesis</p>
+    </div>
+    <div class="pipeline-node reveal" style="transition-delay:0.4s">
+      <span class="pnode-icon">🔊</span>
+      <p class="pnode-label">Output</p>
+      <p class="pnode-desc">Sound system<br>Feedback loop</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="cta-title reveal">THE FLOOR<br><span style="color:var(--cyan)">IS THE</span><br>DJ.</h2>
+  <p class="cta-sub reveal">The AI DJ System is in active prototyping. Every dancer becomes the composer. Movement writes the music. The crowd is the instrument.</p>
+  <div class="cta-actions reveal">
+    <a href="/" class="btn-primary">Back to BodyMovementAI</a>
+    <a href="#system" class="btn-ghost">Learn More</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="footer-logo">AI DJ SYSTEM</div>
+    <div class="footer-tagline">Movement Writes The Music.</div>
+  </div>
+  <div class="footer-right">
+    <div>bodymovementai.com/ai-dj</div>
+    <div>© 2026 BodyMovementAI</div>
+    <div style="color:var(--border);margin-top:8px;">Built with Python · MediaPipe · Web Audio · TensorFlow</div>
+  </div>
+</footer>
+
+<script>
+// ── SCROLL REVEAL ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── AUDIO VISUALIZER CANVAS ──
+(function() {
+  const canvas = document.getElementById('djCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = 480, H = 400;
+  let frame = 0;
+
+  const bars = 64;
+  const barW = W / bars;
+
+  function draw() {
+    ctx.fillStyle = 'rgba(8,10,15,0.15)';
+    ctx.fillRect(0, 0, W, H);
+
+    const time = frame * 0.03;
+
+    // Draw frequency bars
+    for (let i = 0; i < bars; i++) {
+      const freq = Math.sin(time + i * 0.2) * 0.5 + 0.5;
+      const energy = Math.sin(time * 0.7 + i * 0.15) * 0.3 + 0.4;
+      const h = (freq * energy + Math.random() * 0.05) * H * 0.7;
+      const x = i * barW;
+
+      const gradient = ctx.createLinearGradient(x, H, x, H - h);
+      gradient.addColorStop(0, 'rgba(0,204,255,0.8)');
+      gradient.addColorStop(0.5, 'rgba(0,204,255,0.4)');
+      gradient.addColorStop(1, 'rgba(0,229,180,0.1)');
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x + 1, H - h, barW - 2, h);
+    }
+
+    // Center waveform
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(0,204,255,0.6)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x < W; x++) {
+      const y = H / 2 + Math.sin(time * 2 + x * 0.02) * 40
+                + Math.sin(time * 3.7 + x * 0.05) * 20
+                + Math.sin(time * 1.3 + x * 0.01) * 30;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // BPM pulse circle
+    const pulseSize = 20 + Math.sin(time * 4) * 10;
+    ctx.beginPath();
+    ctx.arc(W / 2, H / 2, pulseSize, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0,204,255,${0.3 + Math.sin(time * 4) * 0.2})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Update metrics
+    if (frame % 10 === 0) {
+      const bpm = Math.round(120 + Math.sin(time * 0.3) * 12);
+      const energy = (0.6 + Math.sin(time * 0.5) * 0.3).toFixed(2);
+      document.getElementById('bpmRead').textContent = bpm;
+      document.getElementById('energyRead').textContent = energy;
+    }
+
+    frame++;
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+})();
+
+console.log('AI DJ System Loaded');
+</script>
+
+</body>
+</html>

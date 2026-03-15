@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI + LSD Experience — BodyMovementAI</title>
+<meta name="description" content="Psychedelic visual engine powered by body movement. AI-driven generative visuals that respond to dance, creating immersive sensory experiences in real-time.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black:   #080a0f;
+    --dark:    #0d1117;
+    --panel:   #111820;
+    --border:  #1e2d3d;
+    --dim:     #243344;
+    --violet:  #b44aff;
+    --violet2: #9333ea;
+    --magenta: #ff2d8a;
+    --teal:    #00e5b4;
+    --cyan:    #00ccff;
+    --white:   #e8edf2;
+    --muted:   #5a7a94;
+    --mono:    'Space Mono', monospace;
+    --display: 'Bebas Neue', sans-serif;
+    --body:    'DM Sans', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  ::selection { background: var(--violet); color: var(--white); }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 48px;
+    background: rgba(8,10,15,0.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--violet);
+    letter-spacing: 0.05em;
+    text-decoration: none;
+  }
+  .nav-links {
+    display: flex;
+    gap: 36px;
+    list-style: none;
+  }
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--white); }
+  .nav-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--white);
+    background: linear-gradient(135deg, var(--violet), var(--magenta));
+    padding: 4px 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 120px 48px 80px;
+    gap: 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--violet), var(--magenta), transparent);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(180,74,255,0.006) 3px, rgba(180,74,255,0.006) 4px);
+    pointer-events: none;
+  }
+
+  .hero-left { position: relative; z-index: 2; }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--violet);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.2s;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: var(--violet);
+  }
+
+  .hero-title {
+    font-family: var(--display);
+    font-size: clamp(68px, 8vw, 120px);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.4s;
+  }
+  .hero-title .line-violet { color: var(--violet); }
+  .hero-title .line-magenta { color: var(--magenta); }
+  .hero-title .line-dim { color: var(--muted); font-size: 0.6em; letter-spacing: 0.08em; }
+
+  .hero-desc {
+    font-size: 17px;
+    color: var(--muted);
+    max-width: 480px;
+    line-height: 1.7;
+    margin-bottom: 48px;
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.6s;
+  }
+  .hero-desc strong { color: var(--white); font-weight: 500; }
+
+  .hero-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.8s;
+  }
+
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--white);
+    background: linear-gradient(135deg, var(--violet), var(--magenta));
+    border: none;
+    padding: 16px 32px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: transform 0.15s, box-shadow 0.3s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(180,74,255,0.3); }
+
+  .btn-ghost {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 16px 32px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-ghost:hover { color: var(--white); border-color: var(--violet); }
+
+  /* ── HERO VISUALIZER ── */
+  .hero-right {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeIn 1.2s ease forwards 0.6s;
+  }
+
+  .viz-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .viz-glow {
+    position: absolute;
+    inset: -60px;
+    background: radial-gradient(ellipse at center, rgba(180,74,255,0.1) 0%, rgba(255,45,138,0.04) 40%, transparent 70%);
+    pointer-events: none;
+  }
+
+  #psychCanvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 50%;
+    filter: drop-shadow(0 0 40px rgba(180,74,255,0.4));
+  }
+
+  .canvas-label {
+    position: absolute;
+    bottom: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .metrics-readout {
+    position: absolute;
+    top: 20px;
+    right: -20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .metric-chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--violet);
+    background: rgba(180,74,255,0.08);
+    border: 1px solid rgba(180,74,255,0.2);
+    padding: 5px 10px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .metric-chip span { color: var(--white); }
+
+  /* ── TICKER ── */
+  .ticker {
+    background: linear-gradient(90deg, var(--violet), var(--magenta), var(--violet));
+    background-size: 200% 100%;
+    animation: tickerBg 4s ease infinite;
+    color: var(--white);
+    padding: 10px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-inner {
+    display: inline-flex;
+    gap: 60px;
+    animation: ticker 20s linear infinite;
+  }
+  .ticker-item {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .ticker-item::before {
+    content: '◆';
+    margin-right: 24px;
+    opacity: 0.5;
+  }
+
+  /* ── SECTION STYLES ── */
+  section {
+    padding: 100px 48px;
+    position: relative;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--violet);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    display: block;
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    max-width: 80px;
+  }
+
+  .section-title {
+    font-family: var(--display);
+    font-size: clamp(48px, 6vw, 88px);
+    line-height: 0.92;
+    letter-spacing: 0.02em;
+    margin-bottom: 24px;
+  }
+
+  .section-desc {
+    font-size: 17px;
+    color: var(--muted);
+    max-width: 640px;
+    line-height: 1.7;
+    font-weight: 300;
+    margin-bottom: 48px;
+  }
+  .section-desc strong { color: var(--white); font-weight: 500; }
+
+  /* ── HOW IT WORKS ── */
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+    background: var(--border);
+  }
+  .how-step {
+    background: var(--dark);
+    padding: 48px 36px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+  .how-step:hover { background: var(--panel); }
+  .how-step::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 0;
+    background: var(--violet);
+    transition: height 0.4s ease;
+  }
+  .how-step:hover::before { height: 100%; }
+
+  .step-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--violet);
+    letter-spacing: 0.15em;
+    margin-bottom: 24px;
+  }
+  .step-title {
+    font-family: var(--display);
+    font-size: 30px;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  .step-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+  .step-code {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--violet);
+    background: rgba(180,74,255,0.06);
+    border: 1px solid rgba(180,74,255,0.15);
+    padding: 8px 12px;
+    margin-top: 16px;
+    display: inline-block;
+  }
+
+  /* ── STATUS PANEL ── */
+  .status-section {
+    background: var(--dark);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+    background: var(--border);
+  }
+  .status-card {
+    background: var(--panel);
+    padding: 48px 36px;
+  }
+  .status-card-title {
+    font-family: var(--display);
+    font-size: 28px;
+    letter-spacing: 0.04em;
+    margin-bottom: 20px;
+  }
+  .status-list {
+    list-style: none;
+  }
+  .status-list li {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .status-list li:last-child { border-bottom: none; }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-dot.ready { background: var(--teal); box-shadow: 0 0 8px rgba(0,229,180,0.5); }
+  .status-dot.proto { background: var(--violet); box-shadow: 0 0 8px rgba(180,74,255,0.4); animation: pulse 2s ease infinite; }
+  .status-dot.offline { background: var(--magenta); opacity: 0.5; }
+
+  .action-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .action-btn {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 20px 28px;
+    border: 1px solid var(--border);
+    background: var(--dark);
+    color: var(--white);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.3s, background 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .action-btn:hover { border-color: var(--violet); background: rgba(180,74,255,0.05); }
+  .action-btn .arrow { color: var(--violet); font-size: 18px; }
+  .action-btn.highlight {
+    background: linear-gradient(135deg, rgba(180,74,255,0.15), rgba(255,45,138,0.1));
+    border-color: var(--violet);
+  }
+
+  /* ── EXPERIENCE ZONES ── */
+  .zones-list {
+    margin-top: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .zone-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr auto;
+    align-items: center;
+    gap: 32px;
+    background: var(--dark);
+    padding: 28px 36px;
+    border: 1px solid transparent;
+    transition: border-color 0.25s, background 0.25s;
+    cursor: default;
+  }
+  .zone-row:hover {
+    border-color: var(--border);
+    background: var(--panel);
+  }
+  .zone-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+  }
+  .zone-title {
+    font-family: var(--display);
+    font-size: 28px;
+    letter-spacing: 0.04em;
+  }
+  .zone-desc {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+  .zone-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--violet);
+    border: 1px solid rgba(180,74,255,0.3);
+    padding: 4px 10px;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
+  /* ── STATS ── */
+  .stats-band {
+    padding: 64px 48px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    background: var(--border);
+  }
+  .stat-cell {
+    background: var(--black);
+    padding: 40px 32px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: var(--display);
+    font-size: 72px;
+    line-height: 1;
+    color: var(--violet);
+    letter-spacing: 0.02em;
+  }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  /* ── CTA ── */
+  .cta-section {
+    text-align: center;
+    padding: 120px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(180,74,255,0.06) 0%, rgba(255,45,138,0.03) 40%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-title {
+    font-family: var(--display);
+    font-size: clamp(56px, 8vw, 112px);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    margin-bottom: 28px;
+    position: relative;
+  }
+  .cta-sub {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto 48px;
+    font-weight: 300;
+    position: relative;
+  }
+  .cta-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 48px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 40px;
+  }
+  .footer-logo {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--violet), var(--magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  .footer-tagline {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  .footer-right {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    line-height: 2;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @keyframes tickerBg {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    49%      { opacity: 1; }
+    50%      { opacity: 0; }
+    99%      { opacity: 0; }
+  }
+  .blink { animation: blink 1s step-start infinite; }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; gap: 48px; }
+    .hero-right { order: -1; }
+    .metrics-readout { display: none; }
+    section { padding: 72px 24px; }
+    .how-grid { grid-template-columns: 1fr; }
+    .status-grid { grid-template-columns: 1fr; }
+    .stats-band { grid-template-columns: repeat(2, 1fr); padding: 0; }
+    .zone-row { grid-template-columns: 1fr; gap: 8px; }
+    footer { grid-template-columns: 1fr; }
+    .footer-right { text-align: left; }
+    .cta-section { padding: 80px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">BMAI<span class="blink">_</span></a>
+  <ul class="nav-links">
+    <li><a href="#experience">Experience</a></li>
+    <li><a href="#zones">Zones</a></li>
+    <li><a href="#status">System</a></li>
+    <li><a href="/">Main Site</a></li>
+  </ul>
+  <span class="nav-badge">AI + LSD · Concept</span>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <p class="hero-eyebrow">Psychedelic Intelligence</p>
+    <h1 class="hero-title">
+      AI<br>
+      <span class="line-magenta">&</span><br>
+      <span class="line-violet">LSD</span><br>
+      <span class="line-dim">EXPERIENCE</span>
+    </h1>
+    <p class="hero-desc">
+      Movement-reactive psychedelic visuals powered by AI.
+      <strong>Your body is the controller.</strong> Dance triggers fractals. Stillness summons mandalas. Pose data feeds a generative visual engine that turns every gesture into light.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="alert('Psychedelic Engine — Launch feature in development')">Launch Psychedelic Engine</button>
+      <a href="#experience" class="btn-ghost">Explore</a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="viz-wrap">
+      <div class="viz-glow"></div>
+      <canvas id="psychCanvas" width="480" height="480"></canvas>
+      <p class="canvas-label">GENERATIVE MANDALA — MOVEMENT REACTIVE</p>
+    </div>
+    <div class="metrics-readout">
+      <div class="metric-chip">DEPTH <span id="depthRead">7</span></div>
+      <div class="metric-chip">HUE <span id="hueRead">270°</span></div>
+      <div class="metric-chip">FREQ <span id="freqRead">0.42</span></div>
+      <div class="metric-chip">MODE <span id="modeRead">FRACTAL</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-inner">
+    <span class="ticker-item">Movement-to-Visuals</span>
+    <span class="ticker-item">Generative Fractals</span>
+    <span class="ticker-item">Psychedelic Engine</span>
+    <span class="ticker-item">Mandala Synthesis</span>
+    <span class="ticker-item">Body-Driven Light</span>
+    <span class="ticker-item">Pose-Reactive Color</span>
+    <span class="ticker-item">Immersive Experience</span>
+    <span class="ticker-item">AI Visual Intelligence</span>
+    <span class="ticker-item">Movement-to-Visuals</span>
+    <span class="ticker-item">Generative Fractals</span>
+    <span class="ticker-item">Psychedelic Engine</span>
+    <span class="ticker-item">Mandala Synthesis</span>
+    <span class="ticker-item">Body-Driven Light</span>
+    <span class="ticker-item">Pose-Reactive Color</span>
+    <span class="ticker-item">Immersive Experience</span>
+    <span class="ticker-item">AI Visual Intelligence</span>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="experience">
+  <p class="section-label reveal">How The Experience Works</p>
+  <h2 class="section-title reveal">BODY.<br>LIGHT.<br>MIND.</h2>
+  <p class="section-desc reveal">
+    The psychedelic engine reads your skeleton data in real-time. <strong>Every joint, every velocity, every angle</strong> becomes a parameter in the visual system. Move fast — fractals explode. Stand still — mandalas breathe. Raise your arms — the whole spectrum shifts.
+  </p>
+
+  <div class="how-grid">
+    <div class="how-step reveal">
+      <p class="step-num">01 / SENSE</p>
+      <h3 class="step-title">TRACK THE BODY</h3>
+      <p class="step-desc">Camera captures your full skeleton — 33 joints, real-time. Pose data extracted frame by frame. Your body becomes the input device for the visual system.</p>
+      <span class="step-code">pose = detect(camera_feed)</span>
+    </div>
+
+    <div class="how-step reveal" style="transition-delay: 0.1s">
+      <p class="step-num">02 / MAP</p>
+      <h3 class="step-title">TRANSLATE TO VISUALS</h3>
+      <p class="step-desc">Movement velocity maps to fractal complexity. Joint angles control colour. Body position drives symmetry. AI learns which mappings create the most immersive states.</p>
+      <span class="step-code">visuals = map(pose, engine)</span>
+    </div>
+
+    <div class="how-step reveal" style="transition-delay: 0.2s">
+      <p class="step-num">03 / RENDER</p>
+      <h3 class="step-title">PROJECT THE VISION</h3>
+      <p class="step-desc">Generative visuals rendered at 60fps and projected into the space. Fractals, mandalas, particle systems, and colour fields — all responding to every micro-movement.</p>
+      <span class="step-code">render(visuals, projector)</span>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-band">
+  <div class="stat-cell reveal">
+    <div class="stat-num">60<small style="font-size:0.4em">FPS</small></div>
+    <div class="stat-label">Visual Render Rate</div>
+  </div>
+  <div class="stat-cell reveal" style="transition-delay:0.1s">
+    <div class="stat-num">33</div>
+    <div class="stat-label">Body Input Points</div>
+  </div>
+  <div class="stat-cell reveal" style="transition-delay:0.2s">
+    <div class="stat-num">∞</div>
+    <div class="stat-label">Unique Visuals</div>
+  </div>
+  <div class="stat-cell reveal" style="transition-delay:0.3s">
+    <div class="stat-num">0<small style="font-size:0.4em">ms</small></div>
+    <div class="stat-label">Perceived Latency</div>
+  </div>
+</div>
+
+<!-- EXPERIENCE ZONES -->
+<section id="zones">
+  <p class="section-label reveal">Experience Zones</p>
+  <h2 class="section-title reveal">FIVE<br>DIMENSIONS.</h2>
+
+  <div class="zones-list">
+    <div class="zone-row reveal">
+      <span class="zone-num">01</span>
+      <span class="zone-title">FRACTAL DANCE</span>
+      <span class="zone-desc">Movement velocity drives fractal complexity. Dance harder, deeper patterns. Stand still, infinite recursion collapses to a point.</span>
+      <span class="zone-tag">Velocity → Complexity</span>
+    </div>
+    <div class="zone-row reveal" style="transition-delay:0.1s">
+      <span class="zone-num">02</span>
+      <span class="zone-title">COLOUR FIELD</span>
+      <span class="zone-desc">Joint angles map to the full colour spectrum. Arms wide = warm. Arms crossed = cool. Your body becomes a living colour wheel.</span>
+      <span class="zone-tag">Angle → Hue</span>
+    </div>
+    <div class="zone-row reveal" style="transition-delay:0.15s">
+      <span class="zone-num">03</span>
+      <span class="zone-title">MANDALA BREATH</span>
+      <span class="zone-desc">Slow movement and stillness generate sacred geometry. Mandalas pulse with your breathing rhythm. The visual field responds to your calm.</span>
+      <span class="zone-tag">Stillness → Geometry</span>
+    </div>
+    <div class="zone-row reveal" style="transition-delay:0.2s">
+      <span class="zone-num">04</span>
+      <span class="zone-title">PARTICLE STORM</span>
+      <span class="zone-desc">Rapid movement triggers particle explosions. Each joint emits trails of light. Spin fast enough and the entire space becomes a vortex.</span>
+      <span class="zone-tag">Speed → Particles</span>
+    </div>
+    <div class="zone-row reveal" style="transition-delay:0.25s">
+      <span class="zone-num">05</span>
+      <span class="zone-title">MIRROR WORLD</span>
+      <span class="zone-desc">Your skeleton is rendered as a geometric reflection. Move in one direction, your mirror self responds. Find the boundaries of self and projection.</span>
+      <span class="zone-tag">Pose → Reflection</span>
+    </div>
+  </div>
+</section>
+
+<!-- SYSTEM STATUS -->
+<section id="status" class="status-section">
+  <p class="section-label reveal">System Control</p>
+  <h2 class="section-title reveal">AI POWERED<br>MOVEMENT<br>INTELLIGENCE.</h2>
+
+  <div class="status-grid">
+    <div class="status-card reveal">
+      <h3 class="status-card-title">SYSTEM STATUS</h3>
+      <ul class="status-list">
+        <li>Camera <span class="status-dot ready"></span></li>
+        <li>Pose Tracking <span class="status-dot proto"></span></li>
+        <li>Music Engine <span class="status-dot offline"></span></li>
+        <li>Visual Engine <span class="status-dot offline"></span></li>
+        <li>Projector Output <span class="status-dot offline"></span></li>
+      </ul>
+    </div>
+
+    <div class="status-card reveal" style="transition-delay:0.1s">
+      <h3 class="status-card-title">LAUNCH CONTROLS</h3>
+      <div class="action-panel">
+        <button class="action-btn" onclick="alert('Camera test — Use /camera endpoint')">
+          Test Camera <span class="arrow">→</span>
+        </button>
+        <button class="action-btn highlight" onclick="alert('Dance Analysis — Prototype in development')">
+          Start Dance Analysis <span class="arrow">→</span>
+        </button>
+        <button class="action-btn highlight" onclick="alert('Psychedelic Engine — Coming soon')">
+          Launch Psychedelic Engine <span class="arrow">→</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="cta-title reveal">MOVE<br><span style="color:var(--violet)">YOUR</span><br><span style="color:var(--magenta)">MIND.</span></h2>
+  <p class="cta-sub reveal">The AI + LSD Experience is a concept prototype exploring the intersection of body intelligence and psychedelic visual art. Your movement is the medium. Your body is the brush.</p>
+  <div class="cta-actions reveal">
+    <a href="/" class="btn-primary">Back to BodyMovementAI</a>
+    <a href="/ai-dj/" class="btn-ghost">See AI DJ System</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="footer-logo">AI + LSD EXPERIENCE</div>
+    <div class="footer-tagline">Movement Is The Medium.</div>
+  </div>
+  <div class="footer-right">
+    <div>bodymovementai.com/ai-lsd</div>
+    <div>© 2026 BodyMovementAI</div>
+    <div style="color:var(--border);margin-top:8px;">Built with Python · MediaPipe · WebGL · Generative Systems</div>
+  </div>
+</footer>
+
+<script>
+// ── SCROLL REVEAL ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── PSYCHEDELIC MANDALA CANVAS ──
+(function() {
+  const canvas = document.getElementById('psychCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = 480, H = 480;
+  const cx = W / 2, cy = H / 2;
+  let frame = 0;
+
+  function hsl(h, s, l, a) {
+    return `hsla(${h}, ${s}%, ${l}%, ${a})`;
+  }
+
+  function draw() {
+    ctx.fillStyle = 'rgba(8,10,15,0.08)';
+    ctx.fillRect(0, 0, W, H);
+
+    const time = frame * 0.015;
+    const symmetry = 12;
+    const angleStep = (Math.PI * 2) / symmetry;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Rotating mandala layers
+    for (let layer = 0; layer < 4; layer++) {
+      const layerTime = time + layer * 0.5;
+      const radius = 60 + layer * 50 + Math.sin(layerTime * 0.7) * 20;
+      const hue = (270 + layer * 30 + time * 20) % 360;
+
+      ctx.save();
+      ctx.rotate(time * (0.3 + layer * 0.1) * (layer % 2 === 0 ? 1 : -1));
+
+      for (let i = 0; i < symmetry; i++) {
+        ctx.save();
+        ctx.rotate(angleStep * i);
+
+        // Petal shapes
+        const petalLen = radius + Math.sin(layerTime * 2 + i) * 15;
+        const petalWidth = 8 + Math.sin(layerTime * 1.5 + i * 0.5) * 4;
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(petalWidth, petalLen * 0.5, 0, petalLen);
+        ctx.quadraticCurveTo(-petalWidth, petalLen * 0.5, 0, 0);
+        ctx.strokeStyle = hsl(hue, 80, 60, 0.4 + Math.sin(layerTime + i) * 0.2);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Dots at tips
+        ctx.beginPath();
+        ctx.arc(0, petalLen, 2 + Math.sin(layerTime * 3) * 1, 0, Math.PI * 2);
+        ctx.fillStyle = hsl(hue + 60, 90, 70, 0.6);
+        ctx.fill();
+
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // Center pulsing circle
+    const pulseR = 15 + Math.sin(time * 3) * 8;
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, pulseR * 2);
+    gradient.addColorStop(0, hsl(300, 100, 70, 0.6));
+    gradient.addColorStop(0.5, hsl(270, 80, 50, 0.2));
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, pulseR * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Outer ring
+    const ringR = 200 + Math.sin(time * 0.5) * 20;
+    ctx.beginPath();
+    ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+    ctx.strokeStyle = hsl(270 + time * 10, 60, 50, 0.15);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Update metrics
+    if (frame % 15 === 0) {
+      const hue = Math.round((270 + time * 20) % 360);
+      const freq = (0.3 + Math.sin(time * 0.5) * 0.2).toFixed(2);
+      const depth = Math.round(5 + Math.sin(time * 0.3) * 3);
+      document.getElementById('hueRead').textContent = hue + '°';
+      document.getElementById('freqRead').textContent = freq;
+      document.getElementById('depthRead').textContent = depth;
+    }
+
+    frame++;
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+})();
+
+console.log('AI + LSD Experience Loaded');
+</script>
+
+</body>
+</html>
